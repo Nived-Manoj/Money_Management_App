@@ -23,6 +23,7 @@ class OverviewScreen extends StatelessWidget {
               _buildBalanceSection(context),
               SizedBox(height: 20),
               _buildChart(),
+              SizedBox(height: 20),
               Row(
                 children: [
                   GestureDetector(
@@ -34,15 +35,14 @@ class OverviewScreen extends StatelessWidget {
                   ),
                   SizedBox(width: 20),
                   GestureDetector(
-                    onTap: () {
-                      return _buildExpensesList();
-                    },
+                    onTap: () {},
                     child:
                         Text('Expenses', style: TextStyle(color: Colors.grey)),
                   ),
                 ],
               ),
               SizedBox(height: 20),
+              _buildExpensesList(),
             ],
           ),
         ),
