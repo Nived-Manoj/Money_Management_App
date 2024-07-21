@@ -4,46 +4,48 @@ import 'package:flutter/material.dart';
 class OverviewScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.white,
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          // Implement the action to add expenses
-        },
-        child: Icon(Icons.add),
-      ),
-      body: SafeArea(
-        child: Padding(
-          padding: EdgeInsets.all(20),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _buildHeader(context),
-              SizedBox(height: 20),
-              _buildBalanceSection(context),
-              SizedBox(height: 20),
-              _buildChart(),
-              SizedBox(height: 20),
-              Row(
-                children: [
-                  GestureDetector(
-                    onTap: () {
-                      // Handle incomes click
-                    },
-                    child:
-                        Text('Incomes', style: TextStyle(color: Colors.grey)),
+    return DefaultTabController(
+      length: 2,
+      child: Scaffold(
+        backgroundColor: Colors.white,
+        floatingActionButton: FloatingActionButton(
+          onPressed: () {
+            // Implement the action to add expenses
+          },
+          child: Icon(Icons.add),
+        ),
+        body: SafeArea(
+          child: Padding(
+            padding: EdgeInsets.all(20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _buildHeader(context),
+                SizedBox(height: 20),
+                _buildBalanceSection(context),
+                SizedBox(height: 20),
+                _buildChart(),
+                SizedBox(height: 20),
+                TabBar(
+                  labelColor: Colors.black,
+                  unselectedLabelColor: Colors.grey,
+                  indicatorColor: Colors.cyan,
+                  tabs: [
+                    Tab(text: 'Incomes'),
+                    Tab(text: 'Expenses'),
+                  ],
+                ),
+                SizedBox(height: 20),
+                Expanded(
+                  child: TabBarView(
+                    children: [
+                      _buildIncomesList(),
+                      _buildExpensesList(),
+                    ],
                   ),
-                  SizedBox(width: 20),
-                  GestureDetector(
-                    onTap: () {},
-                    child:
-                        Text('Expenses', style: TextStyle(color: Colors.grey)),
-                  ),
-                ],
-              ),
-              SizedBox(height: 20),
-              _buildExpensesList(),
-            ],
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -120,6 +122,20 @@ class OverviewScreen extends StatelessWidget {
     );
   }
 
+  Widget _buildIncomesList() {
+    return Column(
+      children: [
+        _buildIncomeItem(Icons.lightbulb_outline, 'Electricity',
+            'June 2, 05:20pm', '+\$250'),
+        _buildIncomeItem(
+            Icons.fitness_center, 'Gym', 'June 16, 01:30pm', '+\$100'),
+        _buildIncomeItem(Icons.movie, 'Netflix', 'June 24, 08:10am', '+\$55'),
+        _buildIncomeItem(
+            Icons.local_gas_station, 'Gas', 'June 26, 08:10am', '+\$70'),
+      ],
+    );
+  }
+
   Widget _buildExpensesList() {
     return Column(
       children: [
@@ -131,6 +147,38 @@ class OverviewScreen extends StatelessWidget {
         _buildExpenseItem(
             Icons.local_gas_station, 'Gas', 'June 26, 08:10am', '-\$70'),
       ],
+    );
+  }
+
+  Widget _buildIncomeItem(
+      IconData icon, String title, String date, String amount) {
+    return Padding(
+      padding: EdgeInsets.symmetric(vertical: 10),
+      child: Row(
+        children: [
+          Container(
+            padding: EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: Colors.grey[200],
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(icon, color: Colors.black),
+          ),
+          SizedBox(width: 15),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(title, style: TextStyle(fontWeight: FontWeight.bold)),
+                Text(date, style: TextStyle(color: Colors.grey, fontSize: 12)),
+              ],
+            ),
+          ),
+          Text(amount,
+              style:
+                  TextStyle(color: Colors.green, fontWeight: FontWeight.bold)),
+        ],
+      ),
     );
   }
 

@@ -40,7 +40,7 @@ class BalanceWidget extends StatelessWidget {
           style: TextStyle(fontSize: 16, color: Colors.grey[600]),
         ),
         Text(
-          '\$510.000',
+          '\$80,020',
           style: TextStyle(
               fontSize: 32, fontWeight: FontWeight.bold, color: Colors.black),
         ),
@@ -151,20 +151,29 @@ class RecentAllocationWidget extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Recent Allocation',
+        Text('Recent Investments',
             style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
         SizedBox(height: 20),
         AllocationItem(
             icon: '🚗',
-            name: 'Bitcoin',
-            amount: '\$25,500',
-            percentage: '2,00%'),
+            name: 'Car Washing Company',
+            amount: '\$10,000',
+            percentage: '5,00%'),
         SizedBox(height: 20),
         AllocationItem(
             icon: '₿',
             name: 'Bitcoin',
-            amount: '\$25,500',
-            percentage: '2,00%'),
+            amount: '\$75,500',
+            percentage: '25,00%'),
+        SizedBox(height: 20),
+        AllocationItem(
+            icon: 'F',
+            name: 'Fixed Deposit',
+            amount: '\$50,000',
+            percentage: '7,00%'),
+        SizedBox(height: 20),
+        AllocationItem(
+            icon: 'G', name: 'Gold', amount: '\$1,000', percentage: '1,00%'),
       ],
     );
   }
