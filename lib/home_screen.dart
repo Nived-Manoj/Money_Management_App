@@ -1,35 +1,66 @@
 import 'package:flutter/material.dart';
 import 'package:money_management/spends.dart';
 
-class HomeScreen extends StatelessWidget {
+class HomeScreen extends StatefulWidget {
+  @override
+  _HomeScreenState createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> {
+  double balance = 80020;
+  List<Allocation> recentAllocations = [];
+
+  void allocate(String name, double amount, String icon) {
+    if (balance >= amount) {
+      setState(() {
+        balance -= amount;
+        recentAllocations.insert(
+          0,
+          Allocation(
+            icon: icon,
+            name: name,
+            amount: amount,
+            percentage: ((amount / 80020) * 100).toStringAsFixed(2) + '%',
+          ),
+        );
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
       body: SafeArea(
-        child: Padding(
-          padding: EdgeInsets.all(20),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              BalanceWidget(),
-              SizedBox(height: 20),
-              CardWidget(),
-              SizedBox(height: 20),
-              AllocationWidget(),
-              SizedBox(height: 20),
-              RecentAllocationWidget(),
-              Spacer(),
-              BottomNavigationWidget(),
-            ],
+        child: SingleChildScrollView(
+          child: Padding(
+            padding: EdgeInsets.all(20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                BalanceWidget(balance: balance),
+                SizedBox(height: 20),
+                CardWidget(),
+                SizedBox(height: 20),
+                AllocationWidget(onAllocate: allocate),
+                SizedBox(height: 20),
+                RecentAllocationWidget(allocations: recentAllocations),
+                SizedBox(height: 20), // Add some space to avoid overflow
+              ],
+            ),
           ),
         ),
       ),
+      bottomNavigationBar: BottomNavigationWidget(),
     );
   }
 }
 
 class BalanceWidget extends StatelessWidget {
+  final double balance;
+
+  BalanceWidget({required this.balance});
+
   @override
   Widget build(BuildContext context) {
     return Column(
@@ -40,7 +71,7 @@ class BalanceWidget extends StatelessWidget {
           style: TextStyle(fontSize: 16, color: Colors.grey[600]),
         ),
         Text(
-          '\$80,020',
+          '\$${balance.toStringAsFixed(2)}',
           style: TextStyle(
               fontSize: 32, fontWeight: FontWeight.bold, color: Colors.black),
         ),
@@ -109,36 +140,96 @@ class CardWidget extends StatelessWidget {
   }
 }
 
-class AllocationWidget extends StatelessWidget {
+class AllocationWidget extends StatefulWidget {
+  final Function(String, double, String) onAllocate;
+
+  AllocationWidget({required this.onAllocate});
+
+  @override
+  _AllocationWidgetState createState() => _AllocationWidgetState();
+}
+
+class _AllocationWidgetState extends State<AllocationWidget> {
+  final TextEditingController _nameController = TextEditingController();
+  String _selectedIcon = '🔹';
+  final double _allocationAmount = 1000;
+  bool _isAllocating = false;
+
   @override
   Widget build(BuildContext context) {
-    return Row(
+    return Column(
       children: [
-        Expanded(
-          flex: 2,
-          child: Container(
-            padding: EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-            decoration: BoxDecoration(
-              border: Border.all(color: Colors.grey[300]!),
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: Text('\$ 50.000',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-          ),
-        ),
-        SizedBox(width: 10),
-        Expanded(
-          flex: 1,
-          child: ElevatedButton(
-            child: Text('Allocate'),
-            onPressed: () {},
-            style: ElevatedButton.styleFrom(
-              primary: Colors.blue[400],
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10)),
-              padding: EdgeInsets.symmetric(vertical: 15),
+        if (_isAllocating) ...[
+          TextField(
+            controller: _nameController,
+            decoration: InputDecoration(
+              labelText: 'Allocation Name',
+              border: OutlineInputBorder(),
             ),
           ),
+          SizedBox(height: 10),
+          DropdownButton<String>(
+            value: _selectedIcon,
+            items: ['🔹', '🔸', '🔺', '🔻'].map((String icon) {
+              return DropdownMenuItem<String>(
+                value: icon,
+                child: Text(icon, style: TextStyle(fontSize: 24)),
+              );
+            }).toList(),
+            onChanged: (String? newValue) {
+              setState(() {
+                _selectedIcon = newValue!;
+              });
+            },
+          ),
+          SizedBox(height: 10),
+        ],
+        Row(
+          children: [
+            Expanded(
+              flex: 2,
+              child: Container(
+                padding: EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                decoration: BoxDecoration(
+                  border: Border.all(color: Colors.grey[300]!),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Text('\$ 1000',
+                    style:
+                        TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+              ),
+            ),
+            SizedBox(width: 10),
+            Expanded(
+              flex: 1,
+              child: ElevatedButton(
+                child: Text(_isAllocating ? 'Confirm' : 'Allocate'),
+                onPressed: () {
+                  if (_isAllocating) {
+                    if (_nameController.text.isNotEmpty) {
+                      widget.onAllocate(_nameController.text, _allocationAmount,
+                          _selectedIcon);
+                      setState(() {
+                        _isAllocating = false;
+                        _nameController.clear();
+                        _selectedIcon = '🔹';
+                      });
+                    }
+                  } else {
+                    setState(() {
+                      _isAllocating = true;
+                    });
+                  }
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.blue[400],
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10)),
+                  padding: EdgeInsets.symmetric(vertical: 15),
+                ),
+              ),
+            ),
+          ],
         ),
       ],
     );
@@ -146,6 +237,10 @@ class AllocationWidget extends StatelessWidget {
 }
 
 class RecentAllocationWidget extends StatelessWidget {
+  final List<Allocation> allocations;
+
+  RecentAllocationWidget({required this.allocations});
+
   @override
   Widget build(BuildContext context) {
     return Column(
@@ -154,26 +249,19 @@ class RecentAllocationWidget extends StatelessWidget {
         Text('Recent Investments',
             style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
         SizedBox(height: 20),
-        AllocationItem(
-            icon: '🚗',
-            name: 'Car Washing Company',
-            amount: '\$10,000',
-            percentage: '5,00%'),
-        SizedBox(height: 20),
-        AllocationItem(
-            icon: '₿',
-            name: 'Bitcoin',
-            amount: '\$75,500',
-            percentage: '25,00%'),
-        SizedBox(height: 20),
-        AllocationItem(
-            icon: 'F',
-            name: 'Fixed Deposit',
-            amount: '\$50,000',
-            percentage: '7,00%'),
-        SizedBox(height: 20),
-        AllocationItem(
-            icon: 'G', name: 'Gold', amount: '\$1,000', percentage: '1,00%'),
+        ...allocations.map((allocation) {
+          return Column(
+            children: [
+              AllocationItem(
+                icon: allocation.icon,
+                name: allocation.name,
+                amount: '\$${allocation.amount}',
+                percentage: allocation.percentage,
+              ),
+              SizedBox(height: 20),
+            ],
+          );
+        }).toList(),
       ],
     );
   }
@@ -254,4 +342,17 @@ class BottomNavigationWidget extends StatelessWidget {
       ],
     );
   }
+}
+
+class Allocation {
+  final String icon;
+  final String name;
+  final double amount;
+  final String percentage;
+
+  Allocation(
+      {required this.icon,
+      required this.name,
+      required this.amount,
+      required this.percentage});
 }
