@@ -109,7 +109,6 @@ class OverviewScreen extends StatelessWidget {
                 FlSpot(5, 3),
                 FlSpot(6, 4),
               ],
-              isCurved: true,
               color: Colors.cyan,
               barWidth: 3,
               isStrokeCapRound: true,
