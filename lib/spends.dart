@@ -107,7 +107,7 @@ class OverviewScreen extends StatelessWidget {
                 FlSpot(3, 2),
                 FlSpot(4, 5),
                 FlSpot(5, 3),
-                FlSpot(6, 5),
+                FlSpot(6, 4),
               ],
               color: Colors.cyan,
               barWidth: 3,
