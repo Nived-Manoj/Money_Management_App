@@ -105,7 +105,7 @@ class OverviewScreen extends StatelessWidget {
                 FlSpot(1, 1),
                 FlSpot(2, 4),
                 FlSpot(3, 2),
-                FlSpot(4, 5),
+                FlSpot(4, 7),
                 FlSpot(5, 3),
                 FlSpot(6, 4),
               ],
