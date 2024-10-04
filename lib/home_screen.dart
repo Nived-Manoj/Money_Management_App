@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:money_management/spends.dart';
+import 'package:intl/intl.dart';
 
 class HomeScreen extends StatefulWidget {
   @override
@@ -7,10 +7,12 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  double balance = 80020;
+  double balance = 0;
   List<Allocation> recentAllocations = [];
 
-  void allocate(String name, double amount, String icon) {
+  // Method to allocate money and add details
+  void allocate(String name, double amount, String icon,
+      DateTime allocationDate, DateTime returnDate, double returnAmount) {
     if (balance >= amount) {
       setState(() {
         balance -= amount;
@@ -20,11 +22,38 @@ class _HomeScreenState extends State<HomeScreen> {
             icon: icon,
             name: name,
             amount: amount,
-            percentage: ((amount / 80020) * 100).toStringAsFixed(2) + '%',
+            allocationDate: allocationDate,
+            returnDate: returnDate,
+            returnAmount: returnAmount,
+            percentage:
+                ((returnAmount - amount) / amount * 100).toStringAsFixed(2) +
+                    '%',
           ),
         );
       });
     }
+  }
+
+  // Method to add balance manually
+  void addBalance(double amount) {
+    setState(() {
+      balance += amount;
+    });
+  }
+
+  // Method to close a transaction and add return amount to balance
+  void closeTransaction(Allocation allocation) {
+    setState(() {
+      balance += allocation.returnAmount;
+      recentAllocations.remove(allocation);
+    });
+  }
+
+  // Method to delete a transaction
+  void deleteTransaction(Allocation allocation) {
+    setState(() {
+      recentAllocations.remove(allocation);
+    });
   }
 
   @override
@@ -38,14 +67,16 @@ class _HomeScreenState extends State<HomeScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                BalanceWidget(balance: balance),
+                BalanceWidget(balance: balance, onAddBalance: addBalance),
                 SizedBox(height: 20),
                 CardWidget(),
                 SizedBox(height: 20),
                 AllocationWidget(onAllocate: allocate),
                 SizedBox(height: 20),
-                RecentAllocationWidget(allocations: recentAllocations),
-                SizedBox(height: 20), // Add some space to avoid overflow
+                RecentAllocationWidget(
+                    allocations: recentAllocations,
+                    onCloseTransaction: closeTransaction,
+                    onDeleteTransaction: deleteTransaction),
               ],
             ),
           ),
@@ -58,11 +89,14 @@ class _HomeScreenState extends State<HomeScreen> {
 
 class BalanceWidget extends StatelessWidget {
   final double balance;
+  final Function(double) onAddBalance;
 
-  BalanceWidget({required this.balance});
+  BalanceWidget({required this.balance, required this.onAddBalance});
 
   @override
   Widget build(BuildContext context) {
+    final TextEditingController _balanceController = TextEditingController();
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -70,22 +104,56 @@ class BalanceWidget extends StatelessWidget {
           'Balance',
           style: TextStyle(fontSize: 16, color: Colors.grey[600]),
         ),
-        Text(
-          '\$${balance.toStringAsFixed(2)}',
-          style: TextStyle(
-              fontSize: 32, fontWeight: FontWeight.bold, color: Colors.black),
-        ),
-        SizedBox(height: 10),
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Text(
-              'See money allocation',
-              style: TextStyle(color: Colors.blue[400], fontSize: 16),
+              '\$${balance.toStringAsFixed(2)}',
+              style: TextStyle(
+                  fontSize: 32,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black),
             ),
-            Icon(Icons.arrow_forward_ios, size: 16, color: Colors.blue[400]),
+            ElevatedButton(
+              child: Text('Add Balance'),
+              onPressed: () {
+                showDialog(
+                  context: context,
+                  builder: (context) => AlertDialog(
+                    title: Text('Add Balance'),
+                    content: TextField(
+                      controller: _balanceController,
+                      keyboardType: TextInputType.number,
+                      decoration: InputDecoration(
+                        labelText: 'Enter Amount',
+                      ),
+                    ),
+                    actions: [
+                      TextButton(
+                        child: Text('Cancel'),
+                        onPressed: () {
+                          Navigator.of(context).pop();
+                        },
+                      ),
+                      TextButton(
+                        child: Text('Add'),
+                        onPressed: () {
+                          final double amount =
+                              double.tryParse(_balanceController.text) ?? 0;
+                          if (amount > 0) {
+                            onAddBalance(amount);
+                            Navigator.of(context).pop();
+                          }
+                        },
+                      ),
+                    ],
+                  ),
+                );
+              },
+            ),
           ],
         ),
+        SizedBox(height: 10),
       ],
     );
   }
@@ -141,7 +209,7 @@ class CardWidget extends StatelessWidget {
 }
 
 class AllocationWidget extends StatefulWidget {
-  final Function(String, double, String) onAllocate;
+  final Function(String, double, String, DateTime, DateTime, double) onAllocate;
 
   AllocationWidget({required this.onAllocate});
 
@@ -151,9 +219,24 @@ class AllocationWidget extends StatefulWidget {
 
 class _AllocationWidgetState extends State<AllocationWidget> {
   final TextEditingController _nameController = TextEditingController();
+  final TextEditingController _amountController = TextEditingController();
+  final TextEditingController _returnAmountController = TextEditingController();
   String _selectedIcon = '🔹';
-  final double _allocationAmount = 1000;
+  DateTime? _allocationDate;
+  DateTime? _returnDate;
   bool _isAllocating = false;
+
+  // Helper to show a date picker and format date
+  Future<void> _selectDate(
+      BuildContext context, Function(DateTime) onSelect) async {
+    DateTime? pickedDate = await showDatePicker(
+      context: context,
+      initialDate: DateTime.now(),
+      firstDate: DateTime(2020),
+      lastDate: DateTime(2030),
+    );
+    if (pickedDate != null) onSelect(pickedDate);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -164,6 +247,15 @@ class _AllocationWidgetState extends State<AllocationWidget> {
             controller: _nameController,
             decoration: InputDecoration(
               labelText: 'Allocation Name',
+              border: OutlineInputBorder(),
+            ),
+          ),
+          SizedBox(height: 10),
+          TextField(
+            controller: _amountController,
+            keyboardType: TextInputType.number,
+            decoration: InputDecoration(
+              labelText: 'Allocation Amount',
               border: OutlineInputBorder(),
             ),
           ),
@@ -183,35 +275,81 @@ class _AllocationWidgetState extends State<AllocationWidget> {
             },
           ),
           SizedBox(height: 10),
+          TextField(
+            controller: _returnAmountController,
+            keyboardType: TextInputType.number,
+            decoration: InputDecoration(
+              labelText: 'Return Amount',
+              border: OutlineInputBorder(),
+            ),
+          ),
+          SizedBox(height: 10),
+          Row(
+            children: [
+              Expanded(
+                child: ElevatedButton(
+                  child: Text(_allocationDate == null
+                      ? 'Select Allocation Date'
+                      : DateFormat('dd-MM-yyyy').format(_allocationDate!)),
+                  onPressed: () {
+                    _selectDate(context, (date) {
+                      setState(() {
+                        _allocationDate = date;
+                      });
+                    });
+                  },
+                ),
+              ),
+              SizedBox(width: 10),
+              Expanded(
+                child: ElevatedButton(
+                  child: Text(_returnDate == null
+                      ? 'Select Return Date'
+                      : DateFormat('dd-MM-yyyy').format(_returnDate!)),
+                  onPressed: () {
+                    _selectDate(context, (date) {
+                      setState(() {
+                        _returnDate = date;
+                      });
+                    });
+                  },
+                ),
+              ),
+            ],
+          ),
+          SizedBox(height: 10),
         ],
         Row(
           children: [
             Expanded(
-              flex: 2,
-              child: Container(
-                padding: EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-                decoration: BoxDecoration(
-                  border: Border.all(color: Colors.grey[300]!),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Text('\$ 1000',
-                    style:
-                        TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-              ),
-            ),
-            SizedBox(width: 10),
-            Expanded(
-              flex: 1,
               child: ElevatedButton(
                 child: Text(_isAllocating ? 'Confirm' : 'Allocate'),
                 onPressed: () {
                   if (_isAllocating) {
-                    if (_nameController.text.isNotEmpty) {
-                      widget.onAllocate(_nameController.text, _allocationAmount,
-                          _selectedIcon);
+                    final double amount =
+                        double.tryParse(_amountController.text) ?? 0;
+                    final double returnAmount =
+                        double.tryParse(_returnAmountController.text) ?? 0;
+
+                    if (_nameController.text.isNotEmpty &&
+                        amount > 0 &&
+                        _allocationDate != null &&
+                        _returnDate != null) {
+                      widget.onAllocate(
+                        _nameController.text,
+                        amount,
+                        _selectedIcon,
+                        _allocationDate!,
+                        _returnDate!,
+                        returnAmount,
+                      );
                       setState(() {
                         _isAllocating = false;
                         _nameController.clear();
+                        _amountController.clear();
+                        _returnAmountController.clear();
+                        _allocationDate = null;
+                        _returnDate = null;
                         _selectedIcon = '🔹';
                       });
                     }
@@ -221,12 +359,6 @@ class _AllocationWidgetState extends State<AllocationWidget> {
                     });
                   }
                 },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.blue[400],
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10)),
-                  padding: EdgeInsets.symmetric(vertical: 15),
-                ),
               ),
             ),
           ],
@@ -238,28 +370,59 @@ class _AllocationWidgetState extends State<AllocationWidget> {
 
 class RecentAllocationWidget extends StatelessWidget {
   final List<Allocation> allocations;
+  final Function(Allocation) onCloseTransaction;
+  final Function(Allocation) onDeleteTransaction;
 
-  RecentAllocationWidget({required this.allocations});
+  RecentAllocationWidget(
+      {required this.allocations,
+      required this.onCloseTransaction,
+      required this.onDeleteTransaction});
 
   @override
   Widget build(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Recent Investments',
+        Text('Recent Transactions',
             style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
         SizedBox(height: 20),
         ...allocations.map((allocation) {
-          return Column(
-            children: [
-              AllocationItem(
-                icon: allocation.icon,
-                name: allocation.name,
-                amount: '\$${allocation.amount}',
-                percentage: allocation.percentage,
-              ),
-              SizedBox(height: 20),
-            ],
+          return GestureDetector(
+            onTap: () {
+              showDialog(
+                context: context,
+                builder: (context) => AlertDialog(
+                  title: Text('Manage Transaction'),
+                  content: Text(
+                      'Would you like to close or delete this transaction?'),
+                  actions: [
+                    TextButton(
+                      child: Text('Close'),
+                      onPressed: () {
+                        onCloseTransaction(allocation);
+                        Navigator.of(context).pop();
+                      },
+                    ),
+                    TextButton(
+                      child: Text('Delete'),
+                      onPressed: () {
+                        onDeleteTransaction(allocation);
+                        Navigator.of(context).pop();
+                      },
+                    ),
+                  ],
+                ),
+              );
+            },
+            child: AllocationItem(
+              icon: allocation.icon,
+              name: allocation.name,
+              amount: '\$${allocation.amount}',
+              percentage: allocation.percentage,
+              allocationDate: allocation.allocationDate,
+              returnDate: allocation.returnDate,
+              returnAmount: allocation.returnAmount,
+            ),
           );
         }).toList(),
       ],
@@ -272,12 +435,18 @@ class AllocationItem extends StatelessWidget {
   final String name;
   final String amount;
   final String percentage;
+  final DateTime allocationDate;
+  final DateTime returnDate;
+  final double returnAmount;
 
   AllocationItem(
       {required this.icon,
       required this.name,
       required this.amount,
-      required this.percentage});
+      required this.percentage,
+      required this.allocationDate,
+      required this.returnDate,
+      required this.returnAmount});
 
   @override
   Widget build(BuildContext context) {
@@ -298,7 +467,10 @@ class AllocationItem extends StatelessWidget {
             children: [
               Text(name,
                   style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-              Text('12:40 am, 21 Jun 2021',
+              Text(
+                  'Allocated: ${DateFormat('dd-MM-yyyy').format(allocationDate)}',
+                  style: TextStyle(color: Colors.grey[600], fontSize: 12)),
+              Text('Return: ${DateFormat('dd-MM-yyyy').format(returnDate)}',
                   style: TextStyle(color: Colors.grey[600], fontSize: 12)),
             ],
           ),
@@ -310,6 +482,8 @@ class AllocationItem extends StatelessWidget {
                 style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
             Text(percentage,
                 style: TextStyle(color: Colors.green, fontSize: 12)),
+            Text('Return: \$${returnAmount.toStringAsFixed(2)}',
+                style: TextStyle(color: Colors.blue, fontSize: 12)),
           ],
         ),
       ],
@@ -327,13 +501,7 @@ class BottomNavigationWidget extends StatelessWidget {
             icon: Icon(Icons.home, color: Colors.blue), onPressed: () {}),
         IconButton(
             icon: Icon(Icons.calendar_today, color: Colors.grey),
-            onPressed: () {
-              Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => OverviewScreen(),
-                  ));
-            }),
+            onPressed: () {}),
         IconButton(
             icon: Icon(Icons.notifications, color: Colors.grey),
             onPressed: () {}),
@@ -349,10 +517,16 @@ class Allocation {
   final String name;
   final double amount;
   final String percentage;
+  final DateTime allocationDate;
+  final DateTime returnDate;
+  final double returnAmount;
 
   Allocation(
       {required this.icon,
       required this.name,
       required this.amount,
-      required this.percentage});
+      required this.percentage,
+      required this.allocationDate,
+      required this.returnDate,
+      required this.returnAmount});
 }
