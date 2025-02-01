@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:money_management/analytics_screen.dart';
 import 'package:money_management/home_screen.dart';
 import 'package:money_management/profile.dart';
 
@@ -23,7 +24,7 @@ class _BottomNavState extends State<BottomNav> with TickerProviderStateMixin {
     NavItem(
       icon: Icons.people_rounded,
       label: 'Analytics',
-      screen: HomeScreen(), // Replace with your borrowers screen
+      screen: AnalyticsScreen(), // Replace with your borrowers screen
     ),
     NavItem(
       icon: Icons.add_circle_rounded,
